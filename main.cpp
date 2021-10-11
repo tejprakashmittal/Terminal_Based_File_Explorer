@@ -12,13 +12,14 @@
 using namespace std;
 
 void goto_parent(string);
+void commandMode();
 void normal_mode_start(string);
 int filesToDisplay();
 
 stack<string> left_stac;
 stack<string> right_stac;
 vector<string> file_name_list;
-vector<long> file_size_list;
+vector<string> file_size_list;
 vector<string> ownnership_list;
 vector<string> last_modified_list;
 vector<string> permision_list;
@@ -59,6 +60,7 @@ void clear_scr()
   //cout << "\033[H\033[2J\033[3J";
   //printf("\033[3J\033[H\033[2J");
   cout<<"\033[3J\033[H\033[2J";
+  x=1;
   fflush(stdout);
 }
 
@@ -94,11 +96,31 @@ string last_modification(string filename){
   }
 }
 
-long GetFileSize(string filename)   // In bytes
+string GetFileSize(string filename)   // In bytes
 {
     struct stat stat_buf;
     int rc = stat(filename.c_str(), &stat_buf);
-    return rc == 0 ? stat_buf.st_size : -1;
+    if(rc ==0 ){
+      long long siz=stat_buf.st_size;
+      string converted_size="";
+      if(siz >= 1073741824){
+         siz/=1073741824;
+         converted_size += to_string(siz) + "GB";
+      }
+      else if(siz >= 1048576){
+         siz/=1048576;
+         converted_size += to_string(siz) + "MB";
+      }
+      else if(siz >= 1024){
+         siz/=1024;
+         converted_size += to_string(siz) + "KB";
+      }
+      else{
+         converted_size += to_string(siz) + "B";
+      }
+      return converted_size;
+    }
+    else return "-1";
 }
 
 string getOwnership(string filename){
@@ -193,16 +215,16 @@ void normal_mode_start(string str)
 {
   //terminal_resize();
   clear_scr();
-  cursor_point(0,0);
+  cursor_point(1,1);
   clear_meta_vectors();
   //initEditor();
   getCurDirFiles(str);
   totalFiles_cur_dir=file_name_list.size();
   start_ptr=0;end_ptr=filesToDisplay()-1;
   display_cur_dir_files();
-  cursor_point(0,0);
-  x=0;y=0;
-  cursor_track=-1;
+  cursor_point(1,1);
+  x=1;y=1;
+  cursor_track=0;
   char c;
   while(read(STDIN_FILENO,&c,1)!=0){
     if (c == '\x1b') {
@@ -211,8 +233,8 @@ void normal_mode_start(string str)
           if (read(STDIN_FILENO, &seq[1], 1) != 1);
           if (seq[0] == '[') {
             switch (seq[1]) {
-              case 'A': if(x>0) {x--;cursor_track--;};cursor_point(x,y);break;
-              case 'B': x++;cursor_track++;cursor_point(x,y);break;
+              case 'A': if(x>1) {x--;cursor_track--;};cursor_point(x,y);break;
+              case 'B': if(x<filesToDisplay()) {x++;cursor_track++;cursor_point(x,y);}break;
               case 'C': if(right_stac.empty()==false){
                           string temp_s=right_stac.top();
                           right_stac.pop();
@@ -271,26 +293,34 @@ void normal_mode_start(string str)
           }
           else if(c=='q'){     //Exit
             write(STDOUT_FILENO, "\x1b[2J", 4);
-            cursor_point(0,0);
+            cursor_point(1,1);
             exit(1);
           }
           else if(c=='k'){
             if(start_ptr > 0){
+              clear_scr();
               start_ptr--;
               end_ptr--;
-              cursor_point(0,0);
+              //cursor_point(0,0);
               cursor_track=start_ptr;
               display_cur_dir_files();
             }
           }
           else if(c=='l'){
             if(end_ptr+1 < totalFiles_cur_dir){
+              clear_scr();
               start_ptr++;
               end_ptr++;
-              cursor_point(0,0);
+              //cursor_point(0,0);
               cursor_track=start_ptr;
               display_cur_dir_files();
             }
+          }
+          else if(c==':'){
+            commandMode();
+            x=1;y=1;cursor_track=1;
+            cursor_point(1,1);
+            normal_mode_start(home_dir);
           }
           fflush(0);
     }
@@ -314,11 +344,37 @@ int filesToDisplay()
     return count;
 }
 
+/*Command Mode--------------------------------------------------------------------------------*/
+
+void commandMode(){
+  x=terminalWindow.ws_row - 1;
+  y=1;
+  cursor_point(x,y);
+  printf(":");
+  fflush(stdout);
+  char seq[3];
+  memset(seq, 0, 3 * sizeof(seq[0]));
+  for(;;)
+  {
+    if (read(STDIN_FILENO, seq, 3) == 0)
+        continue;
+
+    //if(seq[0]==27 && seq[1]=='[' && (seq[2]=='A' || seq[2]=='B' || seq[2]=='C'|| seq[2]=='D')) continue;
+    if(seq[0]==27 && seq[1]==0 && seq[2]==0){
+      return;
+    }
+    write(STDOUT_FILENO, seq, 3);
+    // x=1;y=1;cursor_track=1;
+    // cursor_point(1,1);
+    memset(seq, 0, 3 * sizeof(seq[0]));
+  }
+}
+
 int main(){
   enableit();
   clear_scr();
   terminal_resize();
-  cursor_point(0,0);
+  cursor_point(1,1);
   char ch[256];
   getcwd(ch,256);
   home_dir=string(ch);
