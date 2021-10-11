@@ -13,6 +13,7 @@ using namespace std;
 
 void goto_parent(string);
 void normal_mode_start(string);
+int filesToDisplay();
 
 stack<string> left_stac;
 stack<string> right_stac;
@@ -25,7 +26,7 @@ vector<string> permision_list;
 struct winsize terminalWindow;
 struct termios org;
 
-unsigned int x=0,y=0,start=0,end=0,cursor_track=0,totalFiles_cur_dir=0,row_num=0,col_num=0;
+unsigned int x=0,y=0,start_ptr=0,end_ptr=0,cursor_track=0,totalFiles_cur_dir=0,row_num=0,col_num=0,window;
 string home_dir="";
 
 void cursor_point(int x,int y)    
@@ -141,9 +142,9 @@ void getCurDirFiles(string str)
 }
 
 void display_cur_dir_files(){
-  int len=file_size_list.size();
+  //int len=file_name_list.size();
 
-  for(int i=0;i<len;i++){
+  for(int i=start_ptr;i<=end_ptr;i++){
     string temp_str=file_name_list[i];
     if(temp_str.length()>10){
       temp_str=temp_str.substr(0,10);
@@ -196,6 +197,8 @@ void normal_mode_start(string str)
   clear_meta_vectors();
   //initEditor();
   getCurDirFiles(str);
+  totalFiles_cur_dir=file_name_list.size();
+  start_ptr=0;end_ptr=filesToDisplay()-1;
   display_cur_dir_files();
   cursor_point(0,0);
   x=0;y=0;
@@ -204,8 +207,8 @@ void normal_mode_start(string str)
   while(read(STDIN_FILENO,&c,1)!=0){
     if (c == '\x1b') {
           char seq[3];
-          if (read(STDIN_FILENO, &seq[0], 1) != 1) cout<<"ESC"<<endl;
-          if (read(STDIN_FILENO, &seq[1], 1) != 1) cout<<"ESC"<<endl;
+          if (read(STDIN_FILENO, &seq[0], 1) != 1);
+          if (read(STDIN_FILENO, &seq[1], 1) != 1);
           if (seq[0] == '[') {
             switch (seq[1]) {
               case 'A': if(x>0) {x--;cursor_track--;};cursor_point(x,y);break;
@@ -270,6 +273,24 @@ void normal_mode_start(string str)
             write(STDOUT_FILENO, "\x1b[2J", 4);
             cursor_point(0,0);
             exit(1);
+          }
+          else if(c=='k'){
+            if(start_ptr > 0){
+              start_ptr--;
+              end_ptr--;
+              cursor_point(0,0);
+              cursor_track=start_ptr;
+              display_cur_dir_files();
+            }
+          }
+          else if(c=='l'){
+            if(end_ptr+1 < totalFiles_cur_dir){
+              start_ptr++;
+              end_ptr++;
+              cursor_point(0,0);
+              cursor_track=start_ptr;
+              display_cur_dir_files();
+            }
           }
           fflush(0);
     }
