@@ -68,9 +68,11 @@ int isDirectory(string path) {
 
 int main()
 {
-  string str="";
-  str+='.';
-  cout<<str.length();
+  // string str="";
+  // str+='.';
+  // cout<<str.length();
+  //write(STDOUT_FILENO, "\x1b[2J", 4);
+  
   // stack<string> left;
   // char ch[256];
   // getcwd(ch,256);
@@ -81,10 +83,14 @@ int main()
   // left.push(string(ch));
   // cout<<left.top();
   //cout<<isDirectory("/home/os-class/Desktop/aos/clear.cpp");
-  // char c;
-  // while(read(STDIN_FILENO,&c,1)!=0 && c!='q'){
-  //   if(c==10) cout<<"yes";
-  // }
+    char c;
+    // while(read(STDIN_FILENO,&c,1)!=0 && c!='q'){
+    //  if(c==127) {cout<<"yes";fflush(stdout);}
+    // }
+    cin>>c;
+    if(c=='\b') cout<<"Yes";
+  // char c='\b';
+  // printf("%c",c);
   
   return 0;
 }

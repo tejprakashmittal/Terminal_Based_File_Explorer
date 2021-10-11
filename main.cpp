@@ -10,6 +10,9 @@
 #include <sys/stat.h>
 using namespace std;
 
+void goto_parent(string);
+void normal_mode_start(string);
+
 stack<string> left_stac;
 stack<string> right_stac;
 vector<string> file_name_list;
@@ -19,6 +22,7 @@ vector<string> last_modified_list;
 vector<string> permision_list;
 
 int x=0,y=0,cursor_track=0;
+string home_dir="";
 
 void cursor_point(int x,int y)    
 {
@@ -41,12 +45,12 @@ void moveCursor(char key) {
       x++;
       cursor_track++;
       break;
-    case 'a':
-      if(y>0) y--;
-      break;
-    case 'd':
-      y++;
-      break;
+    // case 'a':
+    //   if(y>0) y--;
+    //   break;
+    // case 'd':
+    //   y++;
+    //   break;
   }
 }
 
@@ -60,7 +64,8 @@ void enableit(){
    tcgetattr(STDIN_FILENO,&org);
    atexit(disableRawMode);
    struct termios raw=org;
-   raw.c_lflag &= ~(ECHO | ICANON);
+   raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
+   raw.c_iflag &= ~(BRKINT);
    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
@@ -130,7 +135,11 @@ void getCurDirFiles(string str)
   DIR* dir; dirent* pdir;
   const char *ch=str.c_str();
   string abs_path="";
-  dir=opendir(ch);     
+  dir=opendir(ch);  
+  if(dir == NULL){
+        perror("opendir_error");
+        return;
+    }   
   //abs_path=str.substr(0, str.find_last_of("/"));
   abs_path=str+"/";
   while (pdir=readdir(dir)) {
@@ -181,6 +190,19 @@ int isDirectory(string path) {
    return S_ISDIR(statbuf.st_mode);
 }
 
+void goto_parent(string str){
+  int pos = str.find_last_of('/');
+       if(pos!=string::npos){
+         string tmp_str=str.substr(0,pos);
+         if(tmp_str.size() >= home_dir.size())
+         {
+            left_stac.push(tmp_str);
+            //right_stac.push(str);
+            normal_mode_start(tmp_str);
+         }
+    }
+}
+
 void normal_mode_start(string str)
 {
   //terminal_resize();
@@ -194,24 +216,66 @@ void normal_mode_start(string str)
   x=0;y=0;
   cursor_track=-1;
   char c;
-  while(read(STDIN_FILENO,&c,1)!=0 && c!='q'){
+  while(read(STDIN_FILENO,&c,1)!=0){
     //fflush(stdin);
      moveCursor(c);
      cursor_point(x,y);
      if(c==10){    //Enter key detect
-        string temp_str=str+'/'+file_name_list[cursor_track];
-        if(isDirectory(temp_str)){
-          normal_mode_start(temp_str);
-        }
+        string current_dir=".";
+        string parent_dir="..";
+        if(file_name_list[cursor_track]==current_dir){}
         else{
-          pid_t pid = fork();
-          if (pid == 0) {
-              if(execl("/usr/bin/xdg-open","xdg-open",temp_str.c_str(),NULL)==-1) perror("Error in Exec");
-              exit(1);
+            if(str==home_dir && file_name_list[cursor_track]==parent_dir){}
+            else{
+              // cout<<str<<endl;
+              // fflush(stdout);
+              if(file_name_list[cursor_track]==parent_dir) goto_parent(str);
+              else{
+                  string temp_str=str+'/'+file_name_list[cursor_track];
+                  if(isDirectory(temp_str)){
+                    left_stac.push(temp_str);
+                    normal_mode_start(temp_str);
+                  }
+                  else{
+                    pid_t pid = fork();
+                    if (pid == 0) {
+                        if(execl("/usr/bin/xdg-open","xdg-open",temp_str.c_str(),NULL)==-1) perror("Error in Exec");
+                        // char* arguments[3] = { "vi", (char *)temp_str.c_str(), NULL };
+                        // execvp("vi", arguments);
+                        exit(1);
+                      }
+                    //else wait(0);
+                  }
+              }
             }
-          //else wait(0);
-        }
+          }
      }
+     else if(c=='a' && left_stac.empty()==false){    
+       string temp_s=left_stac.top();
+       left_stac.pop();
+       right_stac.push(temp_s);
+       normal_mode_start(temp_s);
+     }
+     else if(c=='h'){      //Go to home
+       left_stac.push(home_dir);
+       right_stac.push(str);
+       normal_mode_start(home_dir);
+     }
+     else if(c=='d' && right_stac.empty()==false){
+       string temp_s=right_stac.top();
+       right_stac.pop();
+       left_stac.push(temp_s);
+       normal_mode_start(temp_s);
+     }
+     else if(c==127){
+       goto_parent(str);
+     }
+     else if(c=='q'){     //Exit
+       write(STDOUT_FILENO, "\x1b[2J", 4);
+       cursor_point(0,0);
+       exit(1);
+     }
+     fflush(0);
   }
 }
 
@@ -222,6 +286,7 @@ int main(){
   cursor_point(0,0);
   char ch[256];
   getcwd(ch,256);
+  home_dir=string(ch);
   left_stac.push(string(ch));
   normal_mode_start(left_stac.top());
   //cout<<content_list.size();
