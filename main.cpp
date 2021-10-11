@@ -7,6 +7,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <sys/wait.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 using namespace std;
 
@@ -21,7 +22,10 @@ vector<string> ownnership_list;
 vector<string> last_modified_list;
 vector<string> permision_list;
 
-int x=0,y=0,cursor_track=0;
+struct winsize terminalWindow;
+struct termios org;
+
+unsigned int x=0,y=0,start=0,end=0,cursor_track=0,totalFiles_cur_dir=0,row_num=0,col_num=0;
 string home_dir="";
 
 void cursor_point(int x,int y)    
@@ -35,26 +39,6 @@ void terminal_resize(){
   cout << "\e[8;80;150t";
   fflush(stdout);
 }
-
-void moveCursor(char key) {
-  switch (key) {
-    case 'w':
-      if(x>0) {x--;cursor_track--;}
-      break;
-    case 's':
-      x++;
-      cursor_track++;
-      break;
-    // case 'a':
-    //   if(y>0) y--;
-    //   break;
-    // case 'd':
-    //   y++;
-    //   break;
-  }
-}
-
-struct termios org;
 
 void disableRawMode() {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &org);
@@ -79,19 +63,20 @@ void clear_scr()
 
 string permissions(string file){
     struct stat st;
-    char modeval[10];
+    char modeval[11];
     if(stat(file.c_str(), &st) == 0){
         mode_t perm = st.st_mode;
-        modeval[0] = (perm & S_IRUSR) ? 'r' : '-';
-        modeval[1] = (perm & S_IWUSR) ? 'w' : '-';
-        modeval[2] = (perm & S_IXUSR) ? 'x' : '-';
-        modeval[3] = (perm & S_IRGRP) ? 'r' : '-';
-        modeval[4] = (perm & S_IWGRP) ? 'w' : '-';
-        modeval[5] = (perm & S_IXGRP) ? 'x' : '-';
-        modeval[6] = (perm & S_IROTH) ? 'r' : '-';
-        modeval[7] = (perm & S_IWOTH) ? 'w' : '-';
-        modeval[8] = (perm & S_IXOTH) ? 'x' : '-';
-        modeval[9] = '\0';
+        modeval[0] = S_ISDIR(st.st_mode) ? 'd' : '-';
+        modeval[1] = (perm & S_IRUSR) ? 'r' : '-';
+        modeval[2] = (perm & S_IWUSR) ? 'w' : '-';
+        modeval[3] = (perm & S_IXUSR) ? 'x' : '-';
+        modeval[4] = (perm & S_IRGRP) ? 'r' : '-';
+        modeval[5] = (perm & S_IWGRP) ? 'w' : '-';
+        modeval[6] = (perm & S_IXGRP) ? 'x' : '-';
+        modeval[7] = (perm & S_IROTH) ? 'r' : '-';
+        modeval[8] = (perm & S_IWOTH) ? 'w' : '-';
+        modeval[9] = (perm & S_IXOTH) ? 'x' : '-';
+        modeval[10] = '\0';
         return string(modeval);     
     }
     else{
@@ -217,66 +202,95 @@ void normal_mode_start(string str)
   cursor_track=-1;
   char c;
   while(read(STDIN_FILENO,&c,1)!=0){
-    //fflush(stdin);
-     moveCursor(c);
-     cursor_point(x,y);
-     if(c==10){    //Enter key detect
-        string current_dir=".";
-        string parent_dir="..";
-        if(file_name_list[cursor_track]==current_dir){}
-        else{
-            if(str==home_dir && file_name_list[cursor_track]==parent_dir){}
-            else{
-              // cout<<str<<endl;
-              // fflush(stdout);
-              if(file_name_list[cursor_track]==parent_dir) goto_parent(str);
-              else{
-                  string temp_str=str+'/'+file_name_list[cursor_track];
-                  if(isDirectory(temp_str)){
-                    left_stac.push(temp_str);
-                    normal_mode_start(temp_str);
-                  }
-                  else{
-                    pid_t pid = fork();
-                    if (pid == 0) {
-                        if(execl("/usr/bin/xdg-open","xdg-open",temp_str.c_str(),NULL)==-1) perror("Error in Exec");
-                        // char* arguments[3] = { "vi", (char *)temp_str.c_str(), NULL };
-                        // execvp("vi", arguments);
-                        exit(1);
-                      }
-                    //else wait(0);
-                  }
-              }
+    if (c == '\x1b') {
+          char seq[3];
+          if (read(STDIN_FILENO, &seq[0], 1) != 1) cout<<"ESC"<<endl;
+          if (read(STDIN_FILENO, &seq[1], 1) != 1) cout<<"ESC"<<endl;
+          if (seq[0] == '[') {
+            switch (seq[1]) {
+              case 'A': if(x>0) {x--;cursor_track--;};cursor_point(x,y);break;
+              case 'B': x++;cursor_track++;cursor_point(x,y);break;
+              case 'C': if(right_stac.empty()==false){
+                          string temp_s=right_stac.top();
+                          right_stac.pop();
+                          left_stac.push(temp_s);
+                          normal_mode_start(temp_s);
+                        }
+                        break;
+              case 'D': if(left_stac.empty()==false){    
+                          string temp_s=left_stac.top();
+                          left_stac.pop();
+                          right_stac.push(temp_s);
+                          normal_mode_start(temp_s);
+                        }
+                        break;
             }
           }
-     }
-     else if(c=='a' && left_stac.empty()==false){    
-       string temp_s=left_stac.top();
-       left_stac.pop();
-       right_stac.push(temp_s);
-       normal_mode_start(temp_s);
-     }
-     else if(c=='h'){      //Go to home
-       left_stac.push(home_dir);
-       right_stac.push(str);
-       normal_mode_start(home_dir);
-     }
-     else if(c=='d' && right_stac.empty()==false){
-       string temp_s=right_stac.top();
-       right_stac.pop();
-       left_stac.push(temp_s);
-       normal_mode_start(temp_s);
-     }
-     else if(c==127){
-       goto_parent(str);
-     }
-     else if(c=='q'){     //Exit
-       write(STDOUT_FILENO, "\x1b[2J", 4);
-       cursor_point(0,0);
-       exit(1);
-     }
-     fflush(0);
+        } 
+        else {
+          if(c==10){    //Enter key detect
+              string current_dir=".";
+              string parent_dir="..";
+              if(file_name_list[cursor_track]==current_dir){}
+              else{
+                  if(str==home_dir && file_name_list[cursor_track]==parent_dir){}
+                  else{
+                    // cout<<str<<endl;
+                    // fflush(stdout);
+                    if(file_name_list[cursor_track]==parent_dir) goto_parent(str);
+                    else{
+                        string temp_str=str+'/'+file_name_list[cursor_track];
+                        if(isDirectory(temp_str)){
+                          left_stac.push(temp_str);
+                          normal_mode_start(temp_str);
+                        }
+                        else{
+                          pid_t pid = fork();
+                          if (pid == 0) {
+                              if(execl("/usr/bin/xdg-open","xdg-open",temp_str.c_str(),NULL)==-1) perror("Error in Exec");
+                              // char* arguments[3] = { "vi", (char *)temp_str.c_str(), NULL };
+                              // execvp("vi", arguments);
+                              exit(1);
+                            }
+                          //else wait(0);
+                        }
+                    }
+                  }
+                }
+          }
+          else if(c=='h'){      //Go to home
+            left_stac.push(home_dir);
+            right_stac.push(str);
+            normal_mode_start(home_dir);
+          }
+          else if(c==127){
+            goto_parent(str);
+          }
+          else if(c=='q'){     //Exit
+            write(STDOUT_FILENO, "\x1b[2J", 4);
+            cursor_point(0,0);
+            exit(1);
+          }
+          fflush(0);
+    }
   }
+}
+
+int filesToDisplay()
+{
+    int count;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &terminalWindow);
+    row_num= terminalWindow.ws_row - 2;
+    col_num=terminalWindow.ws_col;
+    if (totalFiles_cur_dir <= row_num)
+    {
+        count = totalFiles_cur_dir;
+    }
+    else
+    {
+        count = row_num;
+    }
+    return count;
 }
 
 int main(){
