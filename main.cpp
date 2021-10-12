@@ -326,7 +326,7 @@ void normal_mode_start(string str)
             commandMode();
             x=1;y=1;cursor_track=1;
             cursor_point(1,1);
-            normal_mode_start(home_dir);
+            normal_mode_start(current_directory);
           }
           fflush(0);
     }
@@ -412,6 +412,12 @@ void copy_command(){
   fclose(dest);
 }
 
+void delete_command(){
+  string file_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
+  if( remove(file_path.c_str()) != 0 )
+    perror( "Error deleting file" );
+}
+
 void commandMode(){
   x=terminalWindow.ws_row - 1;
   y=1;
@@ -446,7 +452,15 @@ void commandMode(){
         cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="move"){
+        //move_command();
         cmd_list_str.clear();
+        printf("\x1b[2K");
+        fflush(stdout);
+        y=1;
+        cursor_point(x,y);
+        printf(":");
+        y++;
+        cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="rename"){
         cmd_list_str.clear();
@@ -455,13 +469,29 @@ void commandMode(){
         cmd_list_str.clear();
       }
       else if(cmd_list_str[0]=="delete_file"){
+        delete_command();
         cmd_list_str.clear();
+        printf("\x1b[2K");
+        fflush(stdout);
+        y=1;
+        cursor_point(x,y);
+        printf(":");
+        y++;
+        cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="goto"){
+        current_directory=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
         cmd_list_str.clear();
+        printf("\x1b[2K");
+        fflush(stdout);
+        y=1;
+        cursor_point(x,y);
+        printf(":");
+        y++;
+        cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="search"){
-        cmd_list_str.clear();
+        
       }
     }
     else if(seq[0]==127){
