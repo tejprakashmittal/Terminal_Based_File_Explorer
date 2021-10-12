@@ -33,6 +33,7 @@ struct termios org;
 
 unsigned int x=0,y=0,start_ptr=0,end_ptr=0,cursor_track=0,totalFiles_cur_dir=0,row_num=0,col_num=0,window;
 string home_dir="";
+string current_directory="";
 
 void cursor_point(int x,int y)    
 {
@@ -218,6 +219,7 @@ void goto_parent(string str){
 void normal_mode_start(string str)
 {
   //terminal_resize();
+  current_directory=str;
   clear_scr();
   cursor_point(1,1);
   clear_meta_vectors();
@@ -358,8 +360,33 @@ void split_command(){
   }
 }
 
+string convert_abs_path(string str)
+{
+    string abs="";
+    char firstchar = str[0];
+    
+    if(firstchar=='.')
+    {
+        abs = current_directory + str.substr(1,str.length());    
+    }
+    else if(firstchar=='~')
+    {
+        abs = home_dir + str.substr(1,str.length());
+    }
+    else if(firstchar =='/')
+    {
+        abs = home_dir + str;
+    }
+    else
+    {
+        abs= current_directory + "/" + str;
+    }
+    return abs;
+}
+
 void copy_command(){
-  string dest_full_path=cmd_list_str[2]+"/"+cmd_list_str[1];
+  string dest_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
+  string dest_full_path=dest_path+"/"+cmd_list_str[1];
   FILE* source = fopen(cmd_list_str[1].c_str(), "rb");
   FILE* dest = fopen(dest_full_path.c_str(), "wb");
 
@@ -390,6 +417,8 @@ void commandMode(){
   y=1;
   cursor_point(x,y);
   printf(":");
+  y++;
+  cursor_point(x,y);
   fflush(stdout);
   char seq[3];
   memset(seq, 0, 3 * sizeof(seq[0]));
@@ -398,7 +427,7 @@ void commandMode(){
     if (read(STDIN_FILENO, seq, 3) == 0)
         continue;
 
-    //if(seq[0]==27 && seq[1]=='[' && (seq[2]=='A' || seq[2]=='B' || seq[2]=='C'|| seq[2]=='D')) continue;
+    if(seq[0]==27 && seq[1]=='[' && (seq[2]=='A' || seq[2]=='B' || seq[2]=='C'|| seq[2]=='D')) continue;
     if(seq[0]==27 && seq[1]==0 && seq[2]==0){
       return;
     }
@@ -413,6 +442,8 @@ void commandMode(){
         y=1;
         cursor_point(x,y);
         printf(":");
+        y++;
+        cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="move"){
         cmd_list_str.clear();
@@ -442,9 +473,10 @@ void commandMode(){
       }
     }
     else{
+      cout<<seq[0];
+      fflush(stdout);
       y++;
       cursor_point(x,y);
-      cout<<seq[0];
       cmd_str+=seq[0];
     }
     fflush(stdout);
