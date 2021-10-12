@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include<sstream>
 using namespace std;
 
 void goto_parent(string);
@@ -23,6 +24,9 @@ vector<string> file_size_list;
 vector<string> ownnership_list;
 vector<string> last_modified_list;
 vector<string> permision_list;
+vector<string> cmd_list_str;
+
+string cmd_str="";
 
 struct winsize terminalWindow;
 struct termios org;
@@ -346,6 +350,41 @@ int filesToDisplay()
 
 /*Command Mode--------------------------------------------------------------------------------*/
 
+void split_command(){
+  istringstream ss(cmd_str);
+  string word;
+  while(ss >> word){
+    cmd_list_str.push_back(word);
+  }
+}
+
+void copy_command(){
+  string dest_full_path=cmd_list_str[2]+"/"+cmd_list_str[1];
+  FILE* source = fopen(cmd_list_str[1].c_str(), "rb");
+  FILE* dest = fopen(dest_full_path.c_str(), "wb");
+
+  if (source == NULL) {
+        perror("Error_open_source_path");
+        return;
+    }
+    if (dest == NULL) {
+      fflush(stdout);
+        perror("Error_open_dest_path");
+        return;
+    }
+
+  char c;
+  while((c=getc(source))!=EOF){
+    putc(c,dest);
+  }
+  struct stat source_File_stat;
+  stat(cmd_list_str[1].c_str(), &source_File_stat);
+  chown(dest_full_path.c_str(), source_File_stat.st_uid, source_File_stat.st_gid);
+  chmod(dest_full_path.c_str(), source_File_stat.st_mode);
+  fclose(source);
+  fclose(dest);
+}
+
 void commandMode(){
   x=terminalWindow.ws_row - 1;
   y=1;
@@ -363,7 +402,52 @@ void commandMode(){
     if(seq[0]==27 && seq[1]==0 && seq[2]==0){
       return;
     }
-    write(STDOUT_FILENO, seq, 3);
+    if(seq[0]==10){    //detecting Enter Key
+      split_command();
+      cmd_str="";
+      if(cmd_list_str[0]=="copy"){
+        copy_command();
+        cmd_list_str.clear();
+        printf("\x1b[2K");
+        fflush(stdout);
+        y=1;
+        cursor_point(x,y);
+        printf(":");
+      }
+      else if(cmd_list_str[0]=="move"){
+        cmd_list_str.clear();
+      }
+      else if(cmd_list_str[0]=="rename"){
+        cmd_list_str.clear();
+      }
+      else if(cmd_list_str[0]=="create_file"){
+        cmd_list_str.clear();
+      }
+      else if(cmd_list_str[0]=="delete_file"){
+        cmd_list_str.clear();
+      }
+      else if(cmd_list_str[0]=="goto"){
+        cmd_list_str.clear();
+      }
+      else if(cmd_list_str[0]=="search"){
+        cmd_list_str.clear();
+      }
+    }
+    else if(seq[0]==127){
+      if(y>2){
+        y--;
+        cursor_point(x,y);
+        printf("\x1b[0K");
+        cmd_str.pop_back();
+      }
+    }
+    else{
+      y++;
+      cursor_point(x,y);
+      cout<<seq[0];
+      cmd_str+=seq[0];
+    }
+    fflush(stdout);
     // x=1;y=1;cursor_track=1;
     // cursor_point(1,1);
     memset(seq, 0, 3 * sizeof(seq[0]));
