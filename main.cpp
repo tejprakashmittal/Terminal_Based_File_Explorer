@@ -501,6 +501,23 @@ void createFile(string filename,string dest_path){
   else close(fd);
 }
 
+void createDir(string dirname,string dest_path){
+  dest_path+="/"+dirname;
+  int status=mkdir(dest_path.c_str(),0777);
+  if(status==-1){
+    cout<<endl;
+    cout<<"Error in Creating File";
+  }
+}
+
+void renameFile(string file1,string file2){
+  int status=rename(file1.c_str(),file2.c_str());
+  if(status==-1){
+    cout<<endl;
+    cout<<"Error in Creating File";
+  }
+}
+
 void commandMode(){
   x=terminalWindow.ws_row - 1;
   y=1;
@@ -546,10 +563,30 @@ void commandMode(){
         cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="rename"){
+        renameFile(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
         cmd_list_str.clear();
+        cmd_list_str.clear();
+        printf("\x1b[2K");
+        fflush(stdout);
+        y=1;
+        cursor_point(x,y);
+        printf(":");
+        y++;
+        cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="create_file"){
         createFile(cmd_list_str[1],convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
+        cmd_list_str.clear();
+        printf("\x1b[2K");
+        fflush(stdout);
+        y=1;
+        cursor_point(x,y);
+        printf(":");
+        y++;
+        cursor_point(x,y);
+      }
+      else if(cmd_list_str[0]=="create_dir"){
+        createDir(cmd_list_str[1],convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
         cmd_list_str.clear();
         printf("\x1b[2K");
         fflush(stdout);
