@@ -418,6 +418,73 @@ void delete_command(){
     perror( "Error deleting file" );
 }
 
+bool bfs_helper(queue<string> &que,string filename){
+  for(int i=0;i<file_name_list.size();i++){
+    if(file_name_list[i]=="." || file_name_list[i]=="..") continue;
+    if(file_name_list[i]==filename) return true;
+    string temp_str=current_directory+'/'+file_name_list[i];
+    if(isDirectory(temp_str)){
+      que.push(temp_str);
+    }
+  }
+  return false;
+}
+
+bool bfs(string filename){
+  queue<string> que;
+  if(bfs_helper(que,filename)) return true;
+  while(que.empty()==false){
+    string temp=que.front();
+    que.pop();
+    getCurDirFiles(temp);
+    current_directory=temp;
+    if(bfs_helper(que,filename)) return true;
+  }
+ return false;
+}
+
+/*Delete the single directory-----------------------------*/
+
+bool bfs_helper_del(queue<string> &que,string dirpath){
+  bool flag=true;
+  for(int i=0;i<file_name_list.size();i++){
+    if(file_name_list[i]=="." || file_name_list[i]=="..") continue;
+    string temp_str=current_directory+'/'+file_name_list[i];
+    if(isDirectory(temp_str)){
+      que.push(temp_str);
+      flag=false;
+    }
+    else{
+      if( remove(temp_str.c_str()) != 0 )
+      perror( "Error deleting file" );
+    }
+  }
+  return flag;
+}
+
+void bfs_del(string dirpath){
+  queue<string> que;
+  if(bfs_helper_del(que,dirpath)){
+    if( remove(dirpath.c_str()) != 0 )
+      perror( "Error deleting file" );
+  }
+  while(que.empty()==false){
+    string temp=que.front();
+    que.pop();
+    getCurDirFiles(temp);
+    current_directory=temp;
+    if(bfs_helper_del(que,dirpath)){
+      if( remove(temp.c_str()) != 0 )
+      perror( "Error deleting file" );
+    }
+  }
+}
+
+void delete_dir_command(){
+   file_name_list.clear();
+   bfs_del(cmd_list_str[1]);
+}
+
 void commandMode(){
   x=terminalWindow.ws_row - 1;
   y=1;
@@ -479,6 +546,17 @@ void commandMode(){
         y++;
         cursor_point(x,y);
       }
+      else if(cmd_list_str[0]=="delete_dir"){
+        delete_dir_command();
+        cmd_list_str.clear();
+        printf("\x1b[2K");
+        fflush(stdout);
+        y=1;
+        cursor_point(x,y);
+        printf(":");
+        y++;
+        cursor_point(x,y);
+      }
       else if(cmd_list_str[0]=="goto"){
         current_directory=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
         cmd_list_str.clear();
@@ -491,7 +569,25 @@ void commandMode(){
         cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="search"){
-        
+          string c_dir_temp=current_directory;
+          string res="";
+          if(bfs(cmd_list_str[1])){
+            res="True";
+          }
+          else{
+            res="False";
+          }
+          current_directory=c_dir_temp;
+          // printf("\x1b[2K");
+          // fflush(stdout);
+          cmd_list_str.clear();
+          // y=1;
+          // cursor_point(x,y);
+          // printf(":");
+          cout<<res;
+          // y=6;
+          // cursor_point(x,y);
+          // fflush(stdout);
       }
     }
     else if(seq[0]==127){
