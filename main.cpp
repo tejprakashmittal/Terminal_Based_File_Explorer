@@ -449,7 +449,9 @@ bool bfs_helper_del(queue<string> &que,string dirpath){
   bool flag=true;
   for(int i=0;i<file_name_list.size();i++){
     if(file_name_list[i]=="." || file_name_list[i]=="..") continue;
-    string temp_str=current_directory+'/'+file_name_list[i];
+    string temp_str=dirpath+'/'+ file_name_list[i];
+    // cout<<temp_str;
+    // fflush(stdout);
     if(isDirectory(temp_str)){
       que.push(temp_str);
       flag=false;
@@ -464,25 +466,28 @@ bool bfs_helper_del(queue<string> &que,string dirpath){
 
 void bfs_del(string dirpath){
   queue<string> que;
+  getCurDirFiles(dirpath);
   if(bfs_helper_del(que,dirpath)){
     if( remove(dirpath.c_str()) != 0 )
-      perror( "Error deleting file" );
+      perror( "Error deleting directory first case" );
+      return;
   }
   while(que.empty()==false){
     string temp=que.front();
     que.pop();
+    file_name_list.clear();
     getCurDirFiles(temp);
-    current_directory=temp;
-    if(bfs_helper_del(que,dirpath)){
+    if(bfs_helper_del(que,temp)){
       if( remove(temp.c_str()) != 0 )
-      perror( "Error deleting file" );
+      perror( "Error deleting directory" );
     }
   }
+  remove(dirpath.c_str());
 }
 
 void delete_dir_command(){
    file_name_list.clear();
-   bfs_del(cmd_list_str[1]);
+   bfs_del(convert_abs_path(cmd_list_str[1]));
 }
 
 void commandMode(){
