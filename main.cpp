@@ -6,6 +6,7 @@
 #include <cstring>
 #include <pwd.h>
 #include <grp.h>
+#include<fcntl.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -490,6 +491,16 @@ void delete_dir_command(){
    bfs_del(convert_abs_path(cmd_list_str[1]));
 }
 
+void createFile(string filename,string dest_path){
+  dest_path+="/"+filename;
+  int fd=open(dest_path.c_str(),O_RDONLY | O_CREAT,0644);
+  if(fd==-1){
+    cout<<endl;
+    cout<<"Error in Creating File";
+  }
+  else close(fd);
+}
+
 void commandMode(){
   x=terminalWindow.ws_row - 1;
   y=1;
@@ -538,7 +549,15 @@ void commandMode(){
         cmd_list_str.clear();
       }
       else if(cmd_list_str[0]=="create_file"){
+        createFile(cmd_list_str[1],convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
         cmd_list_str.clear();
+        printf("\x1b[2K");
+        fflush(stdout);
+        y=1;
+        cursor_point(x,y);
+        printf(":");
+        y++;
+        cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="delete_file"){
         delete_command();
