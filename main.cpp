@@ -385,18 +385,24 @@ string convert_abs_path(string str)
     return abs;
 }
 
-void copy_command(){
-  string dest_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
-  string dest_full_path=dest_path+"/"+cmd_list_str[1];
-  FILE* source = fopen(cmd_list_str[1].c_str(), "rb");
+void copy_command(string source_path,string dest_path){
+  //string dest_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
+  string filename=source_path;
+  if(filename.find_last_of("/")!=string::npos){
+    filename=filename.substr(filename.find_last_of("/")+1);
+  }
+  string dest_full_path=dest_path+"/"+filename;
+  FILE* source = fopen(source_path.c_str(), "rb");
   FILE* dest = fopen(dest_full_path.c_str(), "wb");
 
   if (source == NULL) {
+    cout<<source_path<<endl;
         perror("Error_open_source_path");
         return;
     }
     if (dest == NULL) {
       fflush(stdout);
+      cout<<dest_full_path<<endl;
         perror("Error_open_dest_path");
         return;
     }
@@ -406,15 +412,15 @@ void copy_command(){
     putc(c,dest);
   }
   struct stat source_File_stat;
-  stat(cmd_list_str[1].c_str(), &source_File_stat);
+  stat(source_path.c_str(), &source_File_stat);
   chown(dest_full_path.c_str(), source_File_stat.st_uid, source_File_stat.st_gid);
   chmod(dest_full_path.c_str(), source_File_stat.st_mode);
   fclose(source);
   fclose(dest);
 }
 
-void delete_command(){
-  string file_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
+void delete_command(string file_path){
+  //string file_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
   if( remove(file_path.c_str()) != 0 )
     perror( "Error deleting file" );
 }
@@ -518,6 +524,22 @@ void renameFile(string file1,string file2){
   }
 }
 
+void move_single_command(string source,string dest){
+  string filename=source;
+  // if(filename.find_last_of("/")!=string::npos){
+  //   filename=filename.substr(filename.find_last_of("/")+1);
+  // }
+  copy_command(filename,dest);
+  delete_command(source);
+}
+
+void move_multiple(){
+  string dest=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
+  for(int i=1;i<cmd_list_str.size()-1;i++){
+    move_single_command(convert_abs_path(cmd_list_str[i]),dest);
+  }
+}
+
 void commandMode(){
   x=terminalWindow.ws_row - 1;
   y=1;
@@ -541,7 +563,7 @@ void commandMode(){
       split_command();
       cmd_str="";
       if(cmd_list_str[0]=="copy"){
-        copy_command();
+        copy_command(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
         cmd_list_str.clear();
         printf("\x1b[2K");
         fflush(stdout);
@@ -552,7 +574,9 @@ void commandMode(){
         cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="move"){
-        //move_command();
+        if(cmd_list_str.size()==3)
+        move_single_command(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
+        else move_multiple();
         cmd_list_str.clear();
         printf("\x1b[2K");
         fflush(stdout);
@@ -597,7 +621,7 @@ void commandMode(){
         cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="delete_file"){
-        delete_command();
+        delete_command(convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
         cmd_list_str.clear();
         printf("\x1b[2K");
         fflush(stdout);
