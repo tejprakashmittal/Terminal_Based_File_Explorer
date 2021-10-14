@@ -531,28 +531,35 @@ bool bfs_helper_del(queue<string> &que,string dirpath){
 
 void bfs_del(string dirpath){
   queue<string> que;
+  stack<string> nexted_dir_stac;
   getCurDirFiles(dirpath);
   if(bfs_helper_del(que,dirpath)){
     if( remove(dirpath.c_str()) != 0 )
       perror( "Error deleting directory first case" );
       return;
   }
+  nexted_dir_stac.push(dirpath);
   while(que.empty()==false){
     string temp=que.front();
+    nexted_dir_stac.push(temp);
     que.pop();
     file_name_list.clear();
     getCurDirFiles(temp);
     if(bfs_helper_del(que,temp)){
       if( remove(temp.c_str()) != 0 )
       perror( "Error deleting directory" );
+      nexted_dir_stac.pop();
     }
   }
-  remove(dirpath.c_str());
+  while(nexted_dir_stac.empty()==false){
+    remove((nexted_dir_stac.top()).c_str());
+    nexted_dir_stac.pop();
+  }
 }
 
 void delete_dir_command(string dir_path){
    file_name_list.clear();
-   bfs_del(convert_abs_path(dir_path));
+   bfs_del(dir_path);
 }
 
 void createFile(string filename,string dest_path){
@@ -578,7 +585,7 @@ void renameFile(string file1,string file2){
   int status=rename(file1.c_str(),file2.c_str());
   if(status==-1){
     cout<<endl;
-    cout<<"Error in Creating File";
+    cout<<"Error in renaming File";
   }
 }
 
@@ -707,7 +714,7 @@ void commandMode(){
         cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="delete_dir"){
-        delete_dir_command(cmd_list_str[1]);
+        delete_dir_command(convert_abs_path(cmd_list_str[1]));
         cmd_list_str.clear();
         printf("\x1b[2K");
         fflush(stdout);
