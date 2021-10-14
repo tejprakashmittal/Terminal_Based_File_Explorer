@@ -14,6 +14,7 @@
 using namespace std;
 
 void goto_parent(string);
+void createDir(string,string);
 void commandMode();
 void normal_mode_start(string);
 int filesToDisplay();
@@ -419,6 +420,54 @@ void copy_command(string source_path,string dest_path){
   fclose(dest);
 }
 
+void copy_mutiple(){
+  string dest=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
+  for(int i=1;i<cmd_list_str.size()-1;i++){
+    copy_command(convert_abs_path(cmd_list_str[i]),dest);
+  }
+}
+
+bool bfs_helper_copy(queue<string> &que,string source,string &dest){
+  string filename=source;
+  if(filename.find_last_of("/")!=string::npos){
+     filename=filename.substr(filename.find_last_of("/")+1);
+   }
+   createDir(filename,dest);
+   dest=dest+"/"+filename;
+  bool flag=true;
+  for(int i=0;i<file_name_list.size();i++){
+    if(file_name_list[i]=="." || file_name_list[i]=="..") continue;
+    string temp_str=source+'/'+ file_name_list[i];
+    // cout<<temp_str;
+    // fflush(stdout);
+    if(isDirectory(temp_str)){
+      que.push(temp_str);
+      flag=false;
+    }
+    else{
+      copy_command(temp_str,dest);
+    }
+  }
+  return flag;
+}
+
+void bfs_copy(string source,string dest){
+  queue<string> que;
+  getCurDirFiles(source);
+  if(bfs_helper_copy(que,source,dest)) return;
+  while(que.empty()==false){
+    string temp=que.front();
+    que.pop();
+    file_name_list.clear();
+    getCurDirFiles(temp);
+    bfs_helper_copy(que,temp,dest);
+  }
+}
+
+void copy_dir(string source,string dest){
+  bfs_copy(source,dest);
+}
+
 void delete_command(string file_path){
   //string file_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
   if( remove(file_path.c_str()) != 0 )
@@ -563,7 +612,14 @@ void commandMode(){
       split_command();
       cmd_str="";
       if(cmd_list_str[0]=="copy"){
-        copy_command(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
+        if(cmd_list_str.size()==3)
+        {
+          if(isDirectory(convert_abs_path(cmd_list_str[1])))
+          copy_dir(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
+          else
+          copy_command(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
+        }
+        else copy_mutiple();
         cmd_list_str.clear();
         printf("\x1b[2K");
         fflush(stdout);
