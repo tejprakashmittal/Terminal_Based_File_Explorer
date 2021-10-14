@@ -387,6 +387,8 @@ string convert_abs_path(string str)
 }
 
 void copy_command(string source_path,string dest_path){
+  //cout<<"This is source path "<<source_path<<endl;
+  //cout<<"This is dest path "<<dest_path<<endl;
   //string dest_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
   string filename=source_path;
   if(filename.find_last_of("/")!=string::npos){
@@ -397,13 +399,13 @@ void copy_command(string source_path,string dest_path){
   FILE* dest = fopen(dest_full_path.c_str(), "wb");
 
   if (source == NULL) {
-    cout<<source_path<<endl;
+    //cout<<source_path<<endl;
         perror("Error_open_source_path");
         return;
     }
     if (dest == NULL) {
       fflush(stdout);
-      cout<<dest_full_path<<endl;
+      //cout<<dest_full_path<<endl;
         perror("Error_open_dest_path");
         return;
     }
@@ -427,7 +429,7 @@ void copy_mutiple(){
   }
 }
 
-bool bfs_helper_copy(queue<string> &que,string source,string &dest){
+bool bfs_helper_copy(queue<pair<string,string>> &que,string source,string dest){
   string filename=source;
   if(filename.find_last_of("/")!=string::npos){
      filename=filename.substr(filename.find_last_of("/")+1);
@@ -441,10 +443,12 @@ bool bfs_helper_copy(queue<string> &que,string source,string &dest){
     // cout<<temp_str;
     // fflush(stdout);
     if(isDirectory(temp_str)){
-      que.push(temp_str);
+      que.push({temp_str,dest});
       flag=false;
     }
     else{
+      // cout<<"This is copy_command "<<temp_str<<endl;
+      // fflush(stdout);
       copy_command(temp_str,dest);
     }
   }
@@ -452,20 +456,25 @@ bool bfs_helper_copy(queue<string> &que,string source,string &dest){
 }
 
 void bfs_copy(string source,string dest){
-  queue<string> que;
+  queue<pair<string,string>> que;
   getCurDirFiles(source);
   if(bfs_helper_copy(que,source,dest)) return;
   while(que.empty()==false){
-    string temp=que.front();
+    string temp=que.front().first;
+    string temp2=que.front().second;
     que.pop();
     file_name_list.clear();
     getCurDirFiles(temp);
-    bfs_helper_copy(que,temp,dest);
+    current_directory=temp;
+    bfs_helper_copy(que,temp,temp2);
   }
 }
 
 void copy_dir(string source,string dest){
+  file_name_list.clear();
+  string temp=current_directory;
   bfs_copy(source,dest);
+  current_directory=temp;
 }
 
 void delete_command(string file_path){
@@ -541,9 +550,9 @@ void bfs_del(string dirpath){
   remove(dirpath.c_str());
 }
 
-void delete_dir_command(){
+void delete_dir_command(string dir_path){
    file_name_list.clear();
-   bfs_del(convert_abs_path(cmd_list_str[1]));
+   bfs_del(convert_abs_path(dir_path));
 }
 
 void createFile(string filename,string dest_path){
@@ -589,6 +598,11 @@ void move_multiple(){
   }
 }
 
+void move_dir(string source_path,string dest_path){
+  copy_dir(source_path,dest_path);
+  delete_dir_command(source_path);
+}
+
 void commandMode(){
   x=terminalWindow.ws_row - 1;
   y=1;
@@ -631,7 +645,12 @@ void commandMode(){
       }
       else if(cmd_list_str[0]=="move"){
         if(cmd_list_str.size()==3)
-        move_single_command(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
+        {
+          if(isDirectory(convert_abs_path(cmd_list_str[1])))
+          move_dir(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
+          else
+          move_single_command(convert_abs_path(cmd_list_str[1]),convert_abs_path(cmd_list_str[cmd_list_str.size()-1]));
+        }
         else move_multiple();
         cmd_list_str.clear();
         printf("\x1b[2K");
@@ -688,7 +707,7 @@ void commandMode(){
         cursor_point(x,y);
       }
       else if(cmd_list_str[0]=="delete_dir"){
-        delete_dir_command();
+        delete_dir_command(cmd_list_str[1]);
         cmd_list_str.clear();
         printf("\x1b[2K");
         fflush(stdout);
