@@ -213,7 +213,8 @@ void goto_parent(string str){
          string tmp_str=str.substr(0,pos);
          if(tmp_str.size() >= home_dir.size())
          {
-            left_stac.push(tmp_str);
+            //left_stac.push(tmp_str);
+            left_stac.push(str);
             //right_stac.push(str);
             normal_mode_start(tmp_str);
          }
@@ -242,20 +243,22 @@ void normal_mode_start(string str)
           if (read(STDIN_FILENO, &seq[0], 1) != 1);
           if (read(STDIN_FILENO, &seq[1], 1) != 1);
           if (seq[0] == '[') {
-            switch (seq[1]) {
+            switch (seq[1]) {         /*Arrow Keys Implementation*/
               case 'A': if(x>1) {x--;cursor_track--;};cursor_point(x,y);break;
               case 'B': if(x<filesToDisplay()) {x++;cursor_track++;cursor_point(x,y);}break;
               case 'C': if(right_stac.empty()==false){
                           string temp_s=right_stac.top();
                           right_stac.pop();
-                          left_stac.push(temp_s);
+                          //left_stac.push(temp_s);
+                          left_stac.push(str);
                           normal_mode_start(temp_s);
                         }
                         break;
               case 'D': if(left_stac.empty()==false){    
                           string temp_s=left_stac.top();
                           left_stac.pop();
-                          right_stac.push(temp_s);
+                          // right_stac.push(temp_s);
+                          right_stac.push(str);
                           normal_mode_start(temp_s);
                         }
                         break;
@@ -276,7 +279,8 @@ void normal_mode_start(string str)
                     else{
                         string temp_str=str+'/'+file_name_list[cursor_track];
                         if(isDirectory(temp_str)){
-                          left_stac.push(temp_str);
+                          //left_stac.push(temp_str);
+                          left_stac.push(str);
                           normal_mode_start(temp_str);
                         }
                         else{
@@ -392,20 +396,25 @@ void copy_command(string source_path,string dest_path){
   //cout<<"This is source path "<<source_path<<endl;
   //cout<<"This is dest path "<<dest_path<<endl;
   //string dest_path=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
+  char b[1024];
+  int read_count,source,dest;
   string filename=source_path;
   if(filename.find_last_of("/")!=string::npos){
     filename=filename.substr(filename.find_last_of("/")+1);
   }
   string dest_full_path=dest_path+"/"+filename;
-  FILE* source = fopen(source_path.c_str(), "rb");
-  FILE* dest = fopen(dest_full_path.c_str(), "wb");
+  // FILE* source = fopen(source_path.c_str(), "rb");
+  // FILE* dest = fopen(dest_full_path.c_str(), "wb");
 
-  if (source == NULL) {
-    //cout<<source_path<<endl;
+  source = open(source_path.c_str(), O_RDONLY);
+  dest = open(dest_full_path.c_str(), O_WRONLY|O_CREAT,S_IRUSR|S_IWUSR);
+
+  if (source == -1) {
+    cout<<source_path<<endl;
         perror("Error_open_source_path");
         return;
     }
-    if (dest == NULL) {
+    if (dest == -1) {
       fflush(stdout);
       //cout<<dest_full_path<<endl;
         perror("Error_open_dest_path");
@@ -413,15 +422,20 @@ void copy_command(string source_path,string dest_path){
     }
 
   char c;
-  while((c=getc(source))!=EOF){
-    putc(c,dest);
-  }
+  // while((c=getc(source))!=EOF){
+  //   putc(c,dest);
+  // }
+
+  while((read_count = read(source,b,sizeof(b)))>0){
+		write(dest,b,read_count);
+	}
+
   struct stat source_File_stat;
   stat(source_path.c_str(), &source_File_stat);
   chown(dest_full_path.c_str(), source_File_stat.st_uid, source_File_stat.st_gid);
   chmod(dest_full_path.c_str(), source_File_stat.st_mode);
-  fclose(source);
-  fclose(dest);
+  close(source);
+  close(dest);
 }
 
 void copy_mutiple(){
