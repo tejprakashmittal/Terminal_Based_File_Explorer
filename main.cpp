@@ -209,6 +209,12 @@ int isDirectory(string path) {
    return S_ISDIR(statbuf.st_mode);
 }
 
+bool isRegularFile(string filepath){
+     struct stat sb;
+     stat(filepath.c_str(), &sb);
+     return ((sb.st_mode & S_IFMT) == S_IFREG)?true:false;
+}
+
 void goto_parent(string str){
   int pos = str.find_last_of('/');
        if(pos!=string::npos){
@@ -286,13 +292,16 @@ void normal_mode_start(string str)
                           normal_mode_start(temp_str);
                         }
                         else{
-                          pid_t pid = fork();
-                          if (pid == 0) {
-                              if(execl("/usr/bin/xdg-open","xdg-open",temp_str.c_str(),NULL)==-1) perror("Error in Exec");
-                              // char* arguments[3] = { "vi", (char *)temp_str.c_str(), NULL };
-                              // execvp("vi", arguments);
-                              exit(1);
-                            }
+                          if(isRegularFile(temp_str))
+                          {
+                            pid_t pid = fork();
+                            if (pid == 0) {
+                                if(execl("/usr/bin/xdg-open","xdg-open",temp_str.c_str(),NULL)==-1) perror("Error in Exec");
+                                // char* arguments[3] = { "vi", (char *)temp_str.c_str(), NULL };
+                                // execvp("vi", arguments);
+                                exit(1);
+                              }
+                          }
                           //else wait(0);
                         }
                     }

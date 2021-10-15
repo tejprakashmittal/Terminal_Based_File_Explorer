@@ -1,7 +1,5 @@
 # File Explorer -
 
-A File explorer application which will run on terminal with simple cursor based UI (which can be controlled by keyboard) 
-
 This application will work in two modes :
 
 1. `Normal Mode` : used to explore the current directory and navigate the filesystem.
@@ -46,3 +44,5 @@ Press `:` to switch from Normal Mode to Command Mode. Press `Esc` to switch from
 ## Assumptions
 
 1. Absolute path wrt application root will be given
+2. `~/` is path from root(where the application is started).
+3. `./` represents the path current directory.
