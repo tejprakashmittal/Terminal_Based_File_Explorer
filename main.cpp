@@ -13,6 +13,7 @@
 #include<sstream>
 using namespace std;
 
+void refresh_screen(int);
 void goto_parent(string);
 void createDir(string,string);
 void copy_dir(string,string);
@@ -35,6 +36,7 @@ string cmd_str="";
 struct winsize terminalWindow;
 struct termios org;
 
+bool cmd_mode=false;
 unsigned int x=0,y=0,start_ptr=0,end_ptr=0,cursor_track=0,totalFiles_cur_dir=0,row_num=0,col_num=0,window;
 string home_dir="";
 string current_directory="";
@@ -332,6 +334,7 @@ void normal_mode_start(string str)
           }
           else if(c==':'){
             commandMode();
+            cmd_mode=false;
             x=1;y=1;cursor_track=1;
             cursor_point(1,1);
             normal_mode_start(current_directory);
@@ -633,6 +636,7 @@ void move_dir(string source_path,string dest_path){
 }
 
 void commandMode(){
+  cmd_mode=true;
   x=terminalWindow.ws_row - 1;
   y=1;
   cursor_point(x,y);
@@ -810,15 +814,34 @@ void commandMode(){
   }
 }
 
+void refresh_screen(int signal)
+{
+  clear_scr();
+  cursor_point(1,1);
+  clear_meta_vectors();
+  //initEditor();
+  getCurDirFiles(current_directory);
+  totalFiles_cur_dir=file_name_list.size();
+  start_ptr=0;end_ptr=filesToDisplay()-1;
+  display_cur_dir_files();
+  cursor_point(1,1);
+  x=1;y=1;
+  cursor_track=0;
+
+  if(cmd_mode==true) commandMode();
+
+}
+
 int main(){
   enableit();
   clear_scr();
-  terminal_resize();
+  //terminal_resize();
   cursor_point(1,1);
   char ch[256];
   getcwd(ch,256);
   home_dir=string(ch);
   left_stac.push(string(ch));
+  signal(SIGWINCH,refresh_screen);      //Handling terminal resize
   normal_mode_start(left_stac.top());
   //cout<<content_list.size();
 	clear_scr();

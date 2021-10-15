@@ -46,4 +46,3 @@ Press `:` to switch from Normal Mode to Command Mode. Press `Esc` to switch from
 ## Assumptions
 
 1. Absolute path wrt application root will be given
-2. Terminal Resizing is not handeled so please do not resize the terminal after code execution (Full window size is recommended)
