@@ -114,18 +114,18 @@ string GetFileSize(string filename)   // In bytes
       string converted_size="";
       if(siz >= 1073741824){
          siz/=1073741824;
-         converted_size += to_string(siz) + "GB";
+         converted_size += to_string(siz) + "G";
       }
       else if(siz >= 1048576){
          siz/=1048576;
-         converted_size += to_string(siz) + "MB";
+         converted_size += to_string(siz) + "M";
       }
       else if(siz >= 1024){
          siz/=1024;
-         converted_size += to_string(siz) + "KB";
+         converted_size += to_string(siz) + "K";
       }
       else{
-         converted_size += to_string(siz) + "B";
+         converted_size += to_string(siz) + "";
       }
       return converted_size;
     }
@@ -636,6 +636,11 @@ void commandMode(){
     if(seq[0]==27 && seq[1]=='[' && (seq[2]=='A' || seq[2]=='B' || seq[2]=='C'|| seq[2]=='D')) continue;
     if(seq[0]==27 && seq[1]==0 && seq[2]==0){
       return;
+    }
+    if(seq[0]=='q' && seq[1]==0 && seq[2]==0 && cmd_str==""){
+      write(STDOUT_FILENO, "\x1b[2J", 4);
+      cursor_point(1,1);
+      exit(1);
     }
     if(seq[0]==10){    //detecting Enter Key
       split_command();
