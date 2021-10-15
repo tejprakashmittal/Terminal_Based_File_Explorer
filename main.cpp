@@ -775,13 +775,16 @@ void commandMode(){
           // printf("\x1b[2K");
           // fflush(stdout);
           cmd_list_str.clear();
-          // y=1;
-          // cursor_point(x,y);
-          // printf(":");
+          printf("\x1b[2K");
+          y=1;
+          cursor_point(x,y);
+          printf(":");
           cout<<res;
           // y=6;
           // cursor_point(x,y);
-          // fflush(stdout);
+           fflush(stdout);
+           y=6;
+          cursor_point(x,y);
       }
     }
     else if(seq[0]==127){
@@ -789,6 +792,7 @@ void commandMode(){
         y--;
         cursor_point(x,y);
         printf("\x1b[0K");
+        if(cmd_str!="")
         cmd_str.pop_back();
       }
     }
