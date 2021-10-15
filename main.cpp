@@ -15,6 +15,8 @@ using namespace std;
 
 void goto_parent(string);
 void createDir(string,string);
+void copy_dir(string,string);
+void move_dir(string,string);
 void commandMode();
 void normal_mode_start(string);
 int filesToDisplay();
@@ -425,6 +427,9 @@ void copy_command(string source_path,string dest_path){
 void copy_mutiple(){
   string dest=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
   for(int i=1;i<cmd_list_str.size()-1;i++){
+    if(isDirectory(convert_abs_path(cmd_list_str[i])))
+    copy_dir(convert_abs_path(cmd_list_str[i]),dest);
+    else
     copy_command(convert_abs_path(cmd_list_str[i]),dest);
   }
 }
@@ -601,6 +606,9 @@ void move_single_command(string source,string dest){
 void move_multiple(){
   string dest=convert_abs_path(cmd_list_str[cmd_list_str.size()-1]);
   for(int i=1;i<cmd_list_str.size()-1;i++){
+    if(isDirectory(convert_abs_path(cmd_list_str[i])))
+    move_dir(convert_abs_path(cmd_list_str[i]),dest);
+    else
     move_single_command(convert_abs_path(cmd_list_str[i]),dest);
   }
 }
