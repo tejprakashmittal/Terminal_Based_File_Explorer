@@ -385,17 +385,17 @@ string convert_abs_path(string str)
     string abs="";
     char firstchar = str[0];
     
-    if(firstchar=='.')
+    if(firstchar=='.')       // Path from current directory
     {
         abs = current_directory + str.substr(1,str.length());    
     }
-    else if(firstchar=='~')
+    else if(firstchar=='~')    // Path from root (where the app is started)
     {
         abs = home_dir + str.substr(1,str.length());
     }
-    else if(firstchar =='/')
+    else if(firstchar =='/')   // Absolute path or whole path
     {
-        abs = home_dir + str;
+        abs = str;       //home_dir + 
     }
     else
     {

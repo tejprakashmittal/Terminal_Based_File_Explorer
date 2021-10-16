@@ -42,7 +42,7 @@ Press `:` to switch from Normal Mode to Command Mode. Press `Esc` to switch from
 
 
 ## Assumptions
-
-1. Absolute path wrt application root will be given
-2. `~/` is path from root(where the application is started).
-3. `./` represents the path current directory.
+#### Source or Destination path assumptions
+1. `~/` is path from root(where the application is started).
+2. `./` represents the path from current directory.
+3. `/` represents the absolute path (or whole path from home directory)
