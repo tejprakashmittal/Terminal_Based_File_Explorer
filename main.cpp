@@ -185,7 +185,8 @@ void display_cur_dir_files(){
     }
     else{
       int temp=13;
-      while(temp-- > temp_str.length()) temp_str+=' ';
+      int len_temp_str=temp_str.length();
+      while(temp-- > len_temp_str) temp_str+=' ';
     }
     cout<<temp_str<<"\t\t"<<file_size_list[i]<<"\t\t"<<ownnership_list[i]<<"\t\t"<<permision_list[i]<<"\t\t"<<last_modified_list[i]<<endl;
     fflush(stdout);
